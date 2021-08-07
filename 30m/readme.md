@@ -1,0 +1,1 @@
+The 30-minute variant of the talk.  This is much less time than I'd like to have, so I'm hoping to create a 1-hour variant later.
