@@ -32,27 +32,31 @@ Profiling lets you look at the running system and see the interaction between th
 
 ---
 ## how can I use it?
+### Query parameters
+1. `debug`
+   - `?debug=1`: identical stacks are coalesced
+   - `?debug=2`: all stacks are individually printed, allowing memory addresses to be printed
+   - `?debug=0`: binary response of a gzip-encoded .proto file
+2. `seconds`
+   - `profile` and `trace` both start sampling from the moment the HTTP endpoint is hit, this changes their sample time.
+---
 ### the 7 HTTP profiler endpoints: Goroutine & Heap
 1. /debug/pprof/goroutine
-    - with `?debug=1` goroutines with identical stacks are combined with a counter, memory addresses are omitted: useful to find where all the goroutines are spending their time
-    - with `?debug=2` each goroutine is printed on its own: useful to see what a particular goroutine is doing, and metadata about how long it's been alive
-    - with `?debug=0` (same as no debug parameter) provides the same data as `?debug=1`, but in protobuf format for `go tool pprof` to read and interpret
-2. /debug/pprof/heap
-    - not human readable, exports a protobuf encoded heap profile for `go tool pprof` to interpret
+    - Stop The World (STW): what is the stacktrace of every gouroutine?
+3. /debug/pprof/heap == /debug/pprof/allocs 
     - roughly once per 512KB of allocated memory, a sample is taken
     - tightly coupled with the garbage collector, so this profile understands in use vs allocated memory
-
+    - the only difference between `heap` and `allocs` is whether inuse or alloc space is shown by default in `pprof`
 ---
 ## how can I use it?
 ### the 7 HTTP profiler endpoints: The Ones Nobody Uses
 3. /debug/pprof/threadcreate
-    - human readable, similar to `/debug/pprof/goroutine?debug=1`, but for OS threads (`m` in stdlib)
+    - similar to `/debug/pprof/goroutine?debug=1`, but for OS threads (`m` in stdlib)
+    - [useless since 2013](https://github.com/golang/go/issues/6104)
 4. /debug/pprof/block
-    - not human readable, exports a protobuf encoded block profile for `go tool pprof` to interpret
     - disabled by default, use `runtime.SetBlockProfileRate` to enable
     - at the above rate samples are captured for goroutines that are blocked (e.g. network IO, channels)
 5. /debug/pprof/mutex
-    - not human readable, exports a protobuf encoded mutex profile for `go tool pprof` to interpret
     - disabled by default, use `runtime.SetBlockProfileRate` to enable
     - at the above rate samples are captured for goroutines that are blocked on mutex contention
 
@@ -60,17 +64,51 @@ Profiling lets you look at the running system and see the interaction between th
 ## how can I use it?
 ### the 7 HTTP profiler endpoints: CPU & Trace
 6. /debug/pprof/profile
-    - not human readable, exports a protobuf encoded cpu profile for `go tool pprof` to interpret
     - CPU profile: every 10ms captures a stacktrace of all running goroutines
     - anything waiting is not captured. so if CPU usage isn't high, this profile will not have much insight
     - capture length can be tuned with `?seconds=n` parameter, defaults to 30s
 7. /debug/pprof/trace
-    - not human readable, exports a trace for `go tool trace` to interpret
+    - does not respect `debug` parameters, exports a trace for `go tool trace` to interpret
     - has an appreciable performance overhead, most estimates put it at 5-15%
     - instruments the runtime scheduler for insight on goroutine interactions
     - has special support for syscalls, garbage collection, and blocking
     - useful for diagnosing latency (e.g. why did this request take 2 seconds to process?)
     - capture length can be tuned with `?seconds=n` parameter, defaults to 1s
+
+---
+## Example CPU Profile
+### Startup
+```
+Type: cpu
+Time: Aug 14, 2021 at 10:57am (MST)
+Duration: 30.02s, Total samples = 190ms ( 0.63%)
+Entering interactive mode (type "help" for commands, "o" for options)
+(pprof)
+```
+
+---
+## Example CPU Profile
+### Top
+```
+Type: cpu
+Time: Aug 14, 2021 at 10:57am (MST)
+Duration: 30.02s, Total samples = 190ms ( 0.63%)
+Entering interactive mode (type "help" for commands, "o" for options)
+(pprof) top
+Showing nodes accounting for 190ms, 100% of 190ms total
+Showing top 10 nodes out of 36
+flat  flat%   sum%        cum   cum%
+80ms 42.11% 42.11%       80ms 42.11%  runtime.kevent
+30ms 15.79% 57.89%       30ms 15.79%  runtime.nanotime1
+30ms 15.79% 73.68%       30ms 15.79%  syscall.syscall
+20ms 10.53% 84.21%       20ms 10.53%  runtime.walltime1
+10ms  5.26% 89.47%       90ms 47.37%  runtime.netpoll
+10ms  5.26% 94.74%       10ms  5.26%  runtime.pthread_cond_signal
+10ms  5.26%   100%       10ms  5.26%  runtime.pthread_cond_wait
+0     0%   100%       30ms 15.79%  github.com/charmbracelet/bubbletea.(*standardRenderer).flush
+0     0%   100%       30ms 15.79%  github.com/charmbracelet/bubbletea.(*standardRenderer).listen
+0     0%   100%       30ms 15.79%  internal/poll.(*FD).Write
+```
 
 ---
 ## things I think you should know
@@ -83,6 +121,9 @@ Profiling lets you look at the running system and see the interaction between th
 - one profile at a time
 - cgo will eat your lunch
 - `http.DefaultServeMux` registers the endpoints in its `init()`, and That's a Threat Vector (TM)
+- `go tool pprof` can read directly from the HTTP endpoint by streaming the protobuf
+- if you have the binary, pprof will disassemble it alongside the source code
+- the interactive web server is overrated
 
 ---
 ## useful references
