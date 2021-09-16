@@ -32,6 +32,18 @@ Profiling lets you look at the running system and see the interaction between th
 
 ---
 ## how can I use it?
+### Adding the HTTP pprof endpoint
+```go
+import(
+    "net/http"
+    _ "net/http/pprof" // contains an init to register routes on DefaultServeMux
+)
+func main() {
+    http.ListenAndServe("127.0.0.1:8080", http.DefaultServeMux)
+}
+```
+---
+## how can I use it?
 ### Query parameters
 1. `debug`
    - `?debug=1`: identical stacks are coalesced
@@ -40,7 +52,8 @@ Profiling lets you look at the running system and see the interaction between th
 2. `seconds`
    - `profile` and `trace` both start sampling from the moment the HTTP endpoint is hit, this changes their sample time.
 ---
-### the 7 HTTP profiler endpoints: Goroutine & Heap
+## how can I use it?
+### the 8 HTTP profiler endpoints: Goroutine & Heap
 1. /debug/pprof/goroutine
     - Stop The World (STW): what is the stacktrace of every gouroutine?
 3. /debug/pprof/heap == /debug/pprof/allocs 
@@ -49,7 +62,7 @@ Profiling lets you look at the running system and see the interaction between th
     - the only difference between `heap` and `allocs` is whether inuse or alloc space is shown by default in `pprof`
 ---
 ## how can I use it?
-### the 7 HTTP profiler endpoints: The Ones Nobody Uses
+### the 8 HTTP profiler endpoints: The Ones Nobody Uses
 3. /debug/pprof/threadcreate
     - similar to `/debug/pprof/goroutine?debug=1`, but for OS threads (`m` in stdlib)
     - [useless since 2013](https://github.com/golang/go/issues/6104)
@@ -59,15 +72,16 @@ Profiling lets you look at the running system and see the interaction between th
 5. /debug/pprof/mutex
     - disabled by default, use `runtime.SetBlockProfileRate` to enable
     - at the above rate samples are captured for goroutines that are blocked on mutex contention
-
+6. /debug/pprof/cmdline
+    - what arguments was this go program run with? Not even remotely a profile.
 ---
 ## how can I use it?
-### the 7 HTTP profiler endpoints: CPU & Trace
-6. /debug/pprof/profile
+### the 8 HTTP profiler endpoints: CPU & Trace
+7. /debug/pprof/profile
     - CPU profile: every 10ms captures a stacktrace of all running goroutines
     - anything waiting is not captured. so if CPU usage isn't high, this profile will not have much insight
     - capture length can be tuned with `?seconds=n` parameter, defaults to 30s
-7. /debug/pprof/trace
+8. /debug/pprof/trace
     - does not respect `debug` parameters, exports a trace for `go tool trace` to interpret
     - has an appreciable performance overhead, most estimates put it at 5-15%
     - instruments the runtime scheduler for insight on goroutine interactions
@@ -112,7 +126,7 @@ flat  flat%   sum%        cum   cum%
 
 ---
 ## things I think you should know
-- `self` vs `cum`(ulative) ~~ `flat` vs `sum`
+- `self`==`flat`, `cum`(ulative)=="this function, and below in the callstack"
 - absolute import paths and symbolization with `trim_path` and `source_path`
 - `inuse_space` vs `alloc_space`
 - `pprof` and `trace` are packaged in `go tool` for convenience, but have their own lifecycles
