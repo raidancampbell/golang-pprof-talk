@@ -1,3 +1,9 @@
+---
+author: ""
+date: ""
+paging: "%d / %d"
+---
+
 # golang profiling
  - what is it?
  - what can it do?
@@ -19,16 +25,16 @@ The heap profile captures the callstack of the allocating goroutine every 512KB.
 ---
 ## what can it do?
 
-Give you X-ray vision.
-A good code editor lets you peer through potential callstacks to see dependencies.
-Profiling lets you look at the running system and see the interaction between the program and itself, and the program its environment.
+ - Profiling lets you look at the running system and see the interaction between the program and itself, and the program its environment.
+ - Profiling pierces through the abstraction of libraries
+ - It gives you X-ray vision.
 
 ---
-## what can it do?
+## what are common usages?
 
 1. Profile the CPU: is your code using 50% of your CPU while running? this will tell you why.
-1. Profile memory usage: Is something needlessly allocating a lot of memory and needing constant garbage collection?
-1. Tracing (not profiling): What's the whole system doing? See the execution, from a DNS query's UDP syscall to the TLS handshake with the target server.
+1. Profile memory usage: Is something allocating a lot of objects and needing constant garbage collection?
+1. Tracing (not profiling): What's the whole runtime doing? See the execution, from a DNS query's UDP syscall to the TLS handshake with the target server.
 
 ---
 ## how can I use it?
@@ -54,37 +60,38 @@ func main() {
 ---
 ## how can I use it?
 ### the 8 HTTP profiler endpoints: Goroutine & Heap
-1. /debug/pprof/goroutine
-    - Stop The World (STW): what is the stacktrace of every gouroutine?
-3. /debug/pprof/heap == /debug/pprof/allocs 
-    - roughly once per 512KB of allocated memory, a sample is taken
+1. `/debug/pprof/goroutine`
+    - Stop The World (STW): what is the stacktrace of every goroutine?
+3. `/debug/pprof/heap` == `/debug/pprof/allocs` 
+    - once per 512KiB of allocated memory, a sample is taken
     - tightly coupled with the garbage collector, so this profile understands in use vs allocated memory
     - the only difference between `heap` and `allocs` is whether inuse or alloc space is shown by default in `pprof`
 ---
 ## how can I use it?
 ### the 8 HTTP profiler endpoints: The Ones Nobody Uses
-3. /debug/pprof/threadcreate
-    - similar to `/debug/pprof/goroutine?debug=1`, but for OS threads (`m` in stdlib)
+3. `/debug/pprof/threadcreate`
+    - what golang stacktrace resulted in the creation of a new OS thread 
     - [useless since 2013](https://github.com/golang/go/issues/6104)
-4. /debug/pprof/block
+4. `/debug/pprof/block`
     - disabled by default, use `runtime.SetBlockProfileRate` to enable
     - at the above rate samples are captured for goroutines that are blocked (e.g. network IO, channels)
-5. /debug/pprof/mutex
-    - disabled by default, use `runtime.SetBlockProfileRate` to enable
+5. `/debug/pprof/mutex`
+    - disabled by default, use `runtime.SetMutexProfileFraction` to enable
     - at the above rate samples are captured for goroutines that are blocked on mutex contention
-6. /debug/pprof/cmdline
-    - what arguments was this go program run with? Not even remotely a profile.
+6. `/debug/pprof/cmdline`
+    - what arguments was this go program run with?
+    - Not even remotely a profile.
 ---
 ## how can I use it?
 ### the 8 HTTP profiler endpoints: CPU & Trace
-7. /debug/pprof/profile
+7. `/debug/pprof/profile`
     - CPU profile: every 10ms captures a stacktrace of all running goroutines
     - anything waiting is not captured. so if CPU usage isn't high, this profile will not have much insight
     - capture length can be tuned with `?seconds=n` parameter, defaults to 30s
-8. /debug/pprof/trace
+8. `/debug/pprof/trace`
     - does not respect `debug` parameters, exports a trace for `go tool trace` to interpret
-    - has an appreciable performance overhead, most estimates put it at 5-15%
-    - instruments the runtime scheduler for insight on goroutine interactions
+    - has an appreciable performance overhead, most estimates put it at ~15%
+    - the runtime contains 48 flavors of events (as of 1.16) that it will emit when tracing, like entering a syscall or GC start
     - has special support for syscalls, garbage collection, and blocking
     - useful for diagnosing latency (e.g. why did this request take 2 seconds to process?)
     - capture length can be tuned with `?seconds=n` parameter, defaults to 1s
@@ -128,16 +135,16 @@ flat  flat%   sum%        cum   cum%
 ## things I think you should know
 - `self`==`flat`, `cum`(ulative)=="this function, and below in the callstack"
 - absolute import paths and symbolization with `trim_path` and `source_path`
-- `inuse_space` vs `alloc_space`
-- `pprof` and `trace` are packaged in `go tool` for convenience, but have their own lifecycles
+- `list` lets you read the code in context instead of just stacktraces
+- `inuse_space` vs `alloc_space`, `inuse_objects` vs `alloc_objects`
+- `pprof` is vendored into `go tool` for convenience, but has its own lifecycles
 - when, why, how to implement your own profiler
-- the 7 HTTP profiler endpoints
-- one profile at a time
+- only run one profile at a time
 - cgo will eat your lunch
-- `http.DefaultServeMux` registers the endpoints in its `init()`, and That's a Threat Vector (TM)
-- `go tool pprof` can read directly from the HTTP endpoint by streaming the protobuf
+- `net/http/pprof` registers debug endpoints to `DefaultServeMux` in its `init()`, and That's a Threat Vector (TM)
+- `go tool pprof` can read directly from the HTTP endpoint by streaming the gzipped protobuf
 - if you have the binary, pprof will disassemble it alongside the source code
-- the interactive web server is overrated
+- the pprof interactive web server is overrated
 
 ---
 ## useful references
