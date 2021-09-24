@@ -169,18 +169,6 @@ flat  flat%   sum%        cum   cum%
 - pprof's interactive web server (`-http`) is overrated
 
 ---
-## things I think you should know (bonus)
-### `list` in pprof, unsymbolized
-
----
-## things I think you should know (bonus)
-### `list` in pprof, symbolized
-
----
-## things I think you should know (bonus)
-### cgo, eating my lunch
-
----
 ## useful references
 - [Julia Evans' overview blog post](https://jvns.ca/blog/2017/09/24/profiling-go-with-pprof/)
 - [Felix Geisendörfer's notes on the profiler](https://github.com/DataDog/go-profiler-notes)
