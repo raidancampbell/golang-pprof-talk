@@ -55,16 +55,16 @@ func main() {
 /debug/pprof/
 
 Types of profiles available:
-Count	Profile
-0	allocs
-0	block
-0	cmdline
-10	goroutine
-0	heap
-0	mutex
-0	profile
-12	threadcreate
-0	trace
+Count Profile
+0     allocs
+0     block
+0     cmdline
+10    goroutine
+0     heap
+0     mutex
+0     profile
+12    threadcreate
+0     trace
 full goroutine stack dump
 ```
 ---
@@ -107,15 +107,15 @@ full goroutine stack dump
 ### the 8 HTTP profiler endpoints: CPU & Trace
 7. `/debug/pprof/profile`
     - CPU profile: every 10ms captures a stacktrace of all running goroutines
-    - anything waiting is not captured. so if CPU usage isn't high, this profile will not have much insight
+    - anything waiting is not captured. so if CPU usage isn't high, this profile will not give much insight
     - capture length can be tuned with `?seconds=n` parameter, defaults to 30s
     - ex: am I using reflections too much? spending too much time managing goroutines?
 8. `/debug/pprof/trace`
     - does not respect `debug` parameters, exports a trace for `go tool trace` to interpret
     - has an appreciable performance overhead, most estimates put it at ~15%
-    - the runtime contains 48 flavors of events (as of 1.16) that it will emit when tracing, like entering a syscall or GC start
+    - the runtime contains 49 flavors of events (as of 1.20) that it will emit when tracing, like entering a syscall or GC start
     - has special support for syscalls, garbage collection, and blocking
-    - capture length can be tuned with `?seconds=n` parameter, defaults to 1s
+    - capture length can be configured with `?seconds=n` parameter, defaults to 1s
     - ex: why did this request take 2 seconds to process?
 
 ---
@@ -124,10 +124,10 @@ full goroutine stack dump
 `go tool pprof my-profile.profile`
 ```
 Type: cpu
-Time: Aug 14, 2021 at 10:57am (MST)
-Duration: 30.02s, Total samples = 190ms ( 0.63%)
+Time: Apr 1, 2023 at 5:48pm (MST)
+Duration: 74.25s, Total samples = 103.91s (139.94%)
 Entering interactive mode (type "help" for commands, "o" for options)
-(pprof)
+(pprof) 
 ```
 
 ---
@@ -135,23 +135,21 @@ Entering interactive mode (type "help" for commands, "o" for options)
 ### Top
 ```
 Type: cpu
-Time: Aug 14, 2021 at 10:57am (MST)
-Duration: 30.02s, Total samples = 190ms ( 0.63%)
+Time: Apr 1, 2023 at 5:48pm (MST)
+Duration: 74.25s, Total samples = 103.91s (139.94%)
 Entering interactive mode (type "help" for commands, "o" for options)
 (pprof) top
-Showing nodes accounting for 190ms, 100% of 190ms total
-Showing top 10 nodes out of 36
-flat  flat%   sum%        cum   cum%
-80ms 42.11% 42.11%       80ms 42.11%  runtime.kevent
-30ms 15.79% 57.89%       30ms 15.79%  runtime.nanotime1
-30ms 15.79% 73.68%       30ms 15.79%  syscall.syscall
-20ms 10.53% 84.21%       20ms 10.53%  runtime.walltime1
-10ms  5.26% 89.47%       90ms 47.37%  runtime.netpoll
-10ms  5.26% 94.74%       10ms  5.26%  runtime.pthread_cond_signal
-10ms  5.26%   100%       10ms  5.26%  runtime.pthread_cond_wait
-0     0%   100%       30ms 15.79%  github.com/charmbracelet/bubbletea.(*standardRenderer).flush
-0     0%   100%       30ms 15.79%  github.com/charmbracelet/bubbletea.(*standardRenderer).listen
-0     0%   100%       30ms 15.79%  internal/poll.(*FD).Write
+Showing nodes accounting for 101.68s, 97.85% of 103.91s total
+Dropped 129 nodes (cum <= 0.52s)
+Showing top 10 nodes out of 46
+      flat  flat%   sum%        cum   cum%
+    87.53s 84.24% 84.24%     87.53s 84.24%  runtime.cgocall
+     6.36s  6.12% 90.36%      7.33s  7.05%  main.LCSubs
+     2.67s  2.57% 92.93%      2.67s  2.57%  runtime.memmove
+     1.71s  1.65% 94.57%     85.13s 81.93%  main.writeNonmatchesToFile
+     0.99s  0.95% 95.52%      0.99s  0.95%  runtime.madvise
+     0.70s  0.67% 96.20%      0.73s   0.7%  main.writeNonmatchesToFile.func1
+     0.55s  0.53% 96.73%      0.55s  0.53%  runtime.usleep
 ```
 
 ---
@@ -163,7 +161,7 @@ flat  flat%   sum%        cum   cum%
 - you can implement your own profiler to track access to limited resources (e.g. database connections)
 - only run one profile at a time
 - cgo will eat your lunch
-- `net/http/pprof` registers debug endpoints to `DefaultServeMux` in its `init()`, and That's a Threat Vector (TM)
+- `net/http/pprof` registers debug endpoints to `DefaultServeMux` in its `init()`
 - `go tool pprof` can read directly from the HTTP endpoint by streaming the gzipped protobuf
 - if you have the binary, pprof will disassemble it alongside the source code
 - pprof's interactive web server (`-http`) is overrated
@@ -174,3 +172,4 @@ flat  flat%   sum%        cum   cum%
 - [Felix Geisendörfer's notes on the profiler](https://github.com/DataDog/go-profiler-notes)
 - [pretty much half of JBD's blog](https://rakyll.org/archive/)
 - [Dave Cheney's "high performance go" workshop](https://dave.cheney.net/high-performance-go-workshop/dotgo-paris.html)
+- [tracing events](https://github.com/golang/go/blob/go1.20/src/runtime/trace.go#L25-L74)
