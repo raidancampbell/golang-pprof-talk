@@ -1,0 +1,20 @@
+additional topics over 30m:
+ - go tool trace
+   - seeing the CPU scheduler in action, fixing with https://github.com/uber-go/automaxprocs
+   - TCP dials are globally pooled: one misbehaving network configuration will impact other areas
+   - the trace viewer is old, recycled from chromium, and they've been actively looking to replace it for a while
+ - [pcabinet](https://github.com/raidancampbell/pcabinet)
+ - making your own profiles
+ - custom tracing:
+   - tasks are inter-goroutine units of work (similar to a `transaction` in sentry)
+   - regions provide a label to callstacks within a single goroutine (similar to a `span` in sentry)
+   - if a trace captures multiple tasks or regions, they are coalesced by callstacks not by their label
+   - logs may be emitted with custom key/value pairs and are tagged to a task
+ - demo a CPU profile
+ - demo a memory profile
+ - demo a trace
+ - `pprof` is vendored into `go tool` for convenience, but has its own lifecycle
+ - disassembled instructions aren't 100% accurate due to [nondeterministic "skid"](https://github.com/golang/go/issues/41338) when correlating the program counter to the assembly.
+   - why are duplicate instructions returned during disassembly?
+   - this appears to only be a thing for `weblist`: `disasm` does not have the duplicates
+   - this really feels like a bug.  commented [here](https://github.com/google/pprof/pull/628#discussion_r1155236412) on it.
